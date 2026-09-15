@@ -4,6 +4,21 @@
   become: true
 
   tasks:
+    - name: Check current subscription status
+      ansible.builtin.command: subscription-manager identity
+      register: subscription_status
+      changed_when: false
+      failed_when: false
+
+    - name: Register system with Red Hat
+      ansible.builtin.command: >
+        subscription-manager register
+        --username {{ rhsm_username }}
+        --password {{ rhsm_password }}
+        --auto-attach
+      when: subscription_status.rc != 0
+      no_log: true
+
     - name: Set hostname to match inventory name
       ansible.builtin.hostname:
         name: "{{ inventory_hostname }}"
