@@ -13,3 +13,21 @@
         name: "*"
         state: latest
         update_cache: true
+
+    - name: Open k3s ports required on all nodes
+      ansible.posix.firewalld:
+        port: "{{ item }}"
+        permanent: true
+        immediate: true
+        state: enabled
+      loop:
+        - "8472/udp"
+        - "10250/tcp"
+
+    - name: Open k3s API server port on control plane only
+      ansible.posix.firewalld:
+        port: "6443/tcp"
+        permanent: true
+        immediate: true
+        state: enabled
+      when: inventory_hostname in groups['k3s_control_plane']

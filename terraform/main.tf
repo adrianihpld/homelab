@@ -1,5 +1,5 @@
 resource "proxmox_virtual_environment_vm" "k3s_cp01" {
-  name      = "k3s-cp01"
+  name      = "k3s-control-01"
   node_name = "proxmox"
   vm_id     = 101
 
