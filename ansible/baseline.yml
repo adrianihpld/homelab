@@ -1,0 +1,15 @@
+---
+- name: Baseline configuration for all k3s cluster nodes
+  hosts: k3s_cluster
+  become: true
+
+  tasks:
+    - name: Set hostname to match inventory name
+      ansible.builtin.hostname:
+        name: "{{ inventory_hostname }}"
+
+    - name: Update all packages
+      ansible.builtin.dnf:
+        name: "*"
+        state: latest
+        update_cache: true
