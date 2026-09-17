@@ -27,7 +27,7 @@ resource "proxmox_virtual_environment_vm" "k3s_cp01" {
 }
 
 resource "proxmox_virtual_environment_vm" "k3s_workers" {
-  count     = 3
+  count     = 2
   name      = "k3s-wk0${count.index + 1}"
   node_name = "proxmox"
   vm_id     = 102 + count.index
