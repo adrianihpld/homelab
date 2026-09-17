@@ -1,8 +1,17 @@
 # Homelab Platform — Design Document
 
 **Status:** Draft
-**Author:** [Your Name]
-**Last updated:** 2026-09-11
+**Author:** Adrian Hernandez
+
+## Progress Notes
+
+- RHEL 10.2 template built, generalized, and converted to a Proxmox template.
+- 4 VMs provisioned via Terraform. Control plane renamed from `k3s-cp01` to `k3s-control-01`.
+- Ansible baseline playbook covers hostnames, package updates, firewalld rules for k3s ports, and Red Hat subscription registration (credentials stored in Ansible Vault).
+- k3s installed and joined across all 4 nodes. Verified live with `kubectl get nodes`.
+- Fixed a RHEL 10 compatibility issue where `subscription-manager attach` no longer exists (Simple Content Access made it obsolete). Replaced with a direct, idempotent `command` task.
+- Fixed kubectl access for the non-root user by copying the kubeconfig and setting `$KUBECONFIG`, since k3s's bundled kubectl doesn't follow the standard config lookup path.
+- No application workloads deployed yet. Storage and web tier on the M1 not yet started.
 
 ## 1. Overview
 
@@ -33,12 +42,12 @@ The platform runs across two physical hosts:
 
 ## 3. Non-Goals (deferred / out of scope for v1)
 
-- NG1: Centralized identity management (FreeIPA) — deferred to a future phase.
-- NG2: Dedicated firewall/router VM (pfSense/OPNsense) and VLAN segmentation —
-  deferred; existing home router used for now.
+- NG1: Centralized identity management (FreeIPA). Deferred to a future phase.
+- NG2: Dedicated firewall/router VM (pfSense/OPNsense) and VLAN segmentation.
+  Deferred. Existing home router used for now.
 - NG3: Public internet exposure of any service. All access is local-network or
   VPN-gated only.
-- NG4: High availability / multi-control-plane k3s — single control-plane node
+- NG4: High availability / multi-control-plane k3s. A single control-plane node
   is acceptable for v1 given hardware constraints.
 
 ## 4. Requirements
@@ -60,9 +69,9 @@ The platform runs across two physical hosts:
 
 | ID | Requirement |
 |----|-------------|
-| NFR1 | **Reliability** — a single VM or pod failure should not take down the whole platform; k3s should reschedule failed workloads automatically. |
-| NFR2 | **Security** — no service is reachable from the public internet; remote access is via VPN only. |
-| NFR3 | **Reproducibility** — any VM should be rebuildable from Terraform + Ansible with minimal manual steps. |
+| NFR1 | **Reliability** — a single VM or pod failure should not take down the whole platform. k3s should reschedule failed workloads automatically. |
+| NFR2 | **Security** — no service is reachable from the public internet. Remote access is via VPN only. |
+| NFR3 | **Reproducibility** — any VM should be rebuildable from Terraform and Ansible with minimal manual steps. |
 | NFR4 | **Resource efficiency** — host RAM/CPU allocation should leave adequate headroom for the hypervisor/OS (see §6). |
 | NFR5 | **Documentation** — every major architectural decision is recorded (see ADRs, §8) so the reasoning is auditable later. |
 
@@ -71,7 +80,7 @@ The platform runs across two physical hosts:
 ```mermaid
 flowchart TB
     subgraph X86["x86 Host — Proxmox VE (32GB / 8 core)"]
-        CP["k3s-cp01<br/>control plane<br/>2 vCPU / 4GB"]
+        CP["k3s-control-01<br/>control plane<br/>2 vCPU / 4GB"]
         W1["k3s-wk01<br/>worker<br/>2 vCPU / 8GB"]
         W2["k3s-wk02<br/>worker<br/>2 vCPU / 8GB"]
         W3["k3s-wk03<br/>worker<br/>2 vCPU / 8GB"]
@@ -110,16 +119,16 @@ flowchart TB
 
 ## 6. Resource Allocation
 
-### x86 host (32GB total — ~4GB reserved for Proxmox)
+### x86 host (32GB total, ~4GB reserved for Proxmox)
 
 | VM | Role | vCPU | RAM | Disk |
 |----|------|------|-----|------|
-| k3s-cp01 | k3s control plane | 2 | 4GB | 40GB |
+| k3s-control-01 | k3s control plane | 2 | 4GB | 40GB |
 | k3s-wk01 | k3s worker | 2 | 8GB | 60GB |
 | k3s-wk02 | k3s worker | 2 | 8GB | 60GB |
 | k3s-wk03 | k3s worker | 2 | 8GB | 60GB |
 
-### M1 host (16GB total — ~6GB reserved for macOS + Fusion)
+### M1 host (16GB total, ~6GB reserved for macOS + Fusion)
 
 | VM | Role | vCPU | RAM | Disk |
 |----|------|------|-----|------|
@@ -139,18 +148,20 @@ flowchart TB
 | Provisioning | Terraform (Proxmox provider) | manual VM creation, Packer |
 | Storage | ZFS + NFS | TrueNAS Scale appliance |
 | Reverse proxy | Nginx or Caddy | Traefik |
-| TLS | Let's Encrypt via DNS-01 | Internal CA (step-ca) — may add later |
+| TLS | Let's Encrypt via DNS-01 | Internal CA (step-ca), may add later |
 | Identity | Deferred (NG1) | FreeIPA (future phase) |
 
 ## 8. Key Decisions (ADR summary)
 
 - **ADR-001: k3s over full Kubernetes.** Lower resource overhead fits the
-  hardware budget; still demonstrates the same core orchestration concepts.
-- **ADR-002: VMware Fusion over UTM on the M1.** Better performance via
-  Apple's native Hypervisor.framework; confirmed working with RHEL 10 aarch64.
+  hardware budget. Still demonstrates the same core orchestration concepts.
+- **ADR-002: VMware Fusion over UTM on the M1.** Expected to run RHEL 10
+  aarch64 based on available community reports. Not yet built or personally
+  verified. Should perform better than UTM since Fusion uses Apple's native
+  Hypervisor.framework.
 - **ADR-003: FreeIPA and pfSense deferred.** FreeIPA server has poor ARM
-  packaging support and pfSense requires dedicated NIC passthrough neither
-  host can spare in v1; both are cleanly separable future additions.
+  packaging support, and pfSense requires dedicated NIC passthrough neither
+  host can spare in v1. Both are cleanly separable future additions.
 - **ADR-004: CI/CD, Gitea, and observability run as k3s workloads, not
   dedicated VMs.** Avoids VM sprawl and better demonstrates Kubernetes'
   resource bin-packing value proposition.
@@ -162,9 +173,9 @@ flowchart TB
 2. **Phase 2 — Configuration:** Ansible roles harden and configure all hosts
    (users, SSH keys, baseline packages).
 3. **Phase 3 — Cluster bootstrap:** k3s installed across the 4 x86 VMs.
-4. **Phase 4 — Storage & web tier:** ZFS pool + NFS exports on nfs-01; Nginx/Caddy
+4. **Phase 4 — Storage & web tier:** ZFS pool + NFS exports on nfs-01. Nginx/Caddy
    on web-01 with Let's Encrypt DNS-01 TLS.
-5. **Phase 5 — CI/CD:** Gitea + runner deployed into k3s; build/push/deploy
+5. **Phase 5 — CI/CD:** Gitea + runner deployed into k3s. Build/push/deploy
    pipeline for a sample app.
 6. **Phase 6 — Observability:** Prometheus/Grafana/Loki deployed into k3s.
 7. **Phase 7 (future) — FreeIPA and/or pfSense**, if revisited.
