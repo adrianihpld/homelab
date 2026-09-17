@@ -1,6 +1,6 @@
 ---
 - name: Baseline configuration for all k3s cluster nodes
-  hosts: k3s_cluster
+  hosts: all
   become: true
 
   tasks:
