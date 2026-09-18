@@ -1,0 +1,24 @@
+---
+- name: Mount NFS share persistently on client hosts
+  hosts: nfs_clients
+  become: true
+
+  tasks:
+    - name: Install NFS client utilities
+      ansible.builtin.dnf:
+        name: nfs-utils
+        state: present
+
+    - name: Create mount point directory
+      ansible.builtin.file:
+        path: /mnt/shared
+        state: directory
+        mode: '0755'
+
+    - name: Mount NFS share and persist across reboots
+      ansible.posix.mount:
+        path: /mnt/shared
+        src: "10.0.0.156:/tank/shared"
+        fstype: nfs
+        opts: rw,sync
+        state: mounted
