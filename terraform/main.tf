@@ -54,3 +54,33 @@ resource "proxmox_virtual_environment_vm" "k3s_workers" {
     bridge = "vmbr0"
   }
 }
+
+resource "proxmox_virtual_environment_vm" "storage_identity_01" {
+  name      = "k3s-wk03"
+  node_name = "proxmox"
+  vm_id     = 104
+
+  cpu {
+    cores = 2
+    type  = "host"
+  }
+
+  memory {
+    dedicated = 6144
+  }
+
+  agent {
+    enabled = true
+  }
+
+  network_device {
+    bridge = "vmbr0"
+  }
+
+  disk {
+    datastore_id = "local-lvm"
+    interface    = "scsi0"
+    size         = 30
+    file_format  = "raw"
+  }
+}
