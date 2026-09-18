@@ -1,27 +1,32 @@
 # homelab
 
-A two-host homelab platform built to practice IaC and Kubernetes operations. A 4-node k3s cluster runs on Proxmox and RHEL 10, provisioned with Terraform and configured with Ansible (including Vault-encrypted secrets). The second host will add storage and an internal web server. Currently, the cluster is live and verified, with application workloads and CI/CD still in progress.
+A two-host homelab platform built to practice IaC and Kubernetes operations. A 3-node k3s cluster runs on Proxmox and RHEL 10, provisioned with Terraform and configured with Ansible (including Vault-encrypted secrets). A fourth x86 VM runs a mirrored ZFS pool exported over NFS, mounted persistently by the whole cluster and by the second host. The second host (Apple M1, via VMware Fusion) runs a reverse proxy and a planned monitoring node.
 
 ## Stack
 
-- Proxmox VE (virtualization)
-- RHEL 10.2
-- Terraform (provisioning)
-- Ansible + Ansible Vault (configuration, secrets)
-- k3s
+- Proxmox VE (virtualization, x86 host)
+- VMware Fusion (virtualization, Apple M1 host)
+- RHEL 10.2 (x86_64 and aarch64)
+- Terraform (provisioning on the x86 host)
+- Ansible + Ansible Vault (configuration, secrets, across both hosts)
+- k3s (3-node cluster)
+- ZFS (mirrored pool) + NFS (persistent, cross-architecture export)
 
 ## Architecture & Design
 
-Full design doc, including requirements and architecture diagram: [docs/design.md](docs/design.md)
+Full design doc, including requirements, architecture diagram, and decision history: [docs/design.md](docs/design.md)
 
 ## Status
 
 Working:
 - RHEL 10.2 template, generalized and cloned via Terraform
-- 4-node k3s cluster, provisioned and configured, verified live
+- 3-node k3s cluster (1 control plane, 2 workers), provisioned and configured, verified live
+- Mirrored ZFS pool on a repurposed x86 VM, exported over NFS
+- NFS share mounted persistently (survives reboot) on all k3s nodes and the reverse proxy host, across both x86 and ARM
 
-In progress:
-- Application workloads
-- Storage + web tier on the second host
+In progress / not started:
+- Application workloads on the cluster
+- Monitoring (Prometheus/Grafana) on the M1's `monitor-01` VM
+- Reverse proxy configuration on `web-01`
 - CI/CD pipeline
-- Observability
+- TLS with a real domain
