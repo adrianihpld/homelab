@@ -30,4 +30,3 @@ In progress / not started:
 - Reverse proxy configuration on `web-01`
 - CI/CD pipeline
 - TLS with a real domainTest commit to verify contribution graph
-Verifying commit author fix
