@@ -38,6 +38,8 @@
       loop:
         - "8472/udp"
         - "10250/tcp"
+        - "80/tcp"
+        - "443/tcp"
 
     - name: Open k3s API server port on control plane only
       ansible.posix.firewalld:
@@ -46,3 +48,21 @@
         immediate: true
         state: enabled
       when: inventory_hostname in groups['k3s_control_plane']
+
+    - name: Enable masquerading for k3s pod networking
+      ansible.posix.firewalld:
+        masquerade: true
+        permanent: true
+        immediate: true
+        state: enabled
+    
+    - name: Trust flannel and cni interfaces in firewalld
+      ansible.posix.firewalld:
+        zone: trusted
+        interface: "{{ item }}"
+        permanent: true
+        immediate: true
+        state: enabled
+      loop:
+        - flannel.1
+        - cni0
