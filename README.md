@@ -29,4 +29,4 @@ In progress / not started:
 - Monitoring (Prometheus/Grafana) on the M1's `monitor-01` VM
 - Reverse proxy configuration on `web-01`
 - CI/CD pipeline
-- TLS with a real domainTest commit to verify contribution graph
+- TLS with a real domain
