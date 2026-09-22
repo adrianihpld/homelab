@@ -56,7 +56,7 @@ resource "proxmox_virtual_environment_vm" "k3s_workers" {
 }
 
 resource "proxmox_virtual_environment_vm" "storage_identity_01" {
-  name      = "k3s-wk03"
+  name      = "storage-01"
   node_name = "proxmox"
   vm_id     = 104
 
